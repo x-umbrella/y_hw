@@ -86,11 +86,16 @@ class UserService(ServiceMixin):
         self.session.commit()
         self.session.refresh(_user)
         config_auth.blocked_access_tokens.setex(_jwt.get_raw_jwt()["jti"],
-        config_auth.config.JWT_ACCESS_EXPIRES_S, "true"
+        config_auth.JWT_ACCESS_EXPIRES_S, "true"
         )
         return {"user": UserMe.from_orm(_user),
             "access_token": _jwt.create_access_token(subject=user.username)
         }
+
+    def get_user_by_access_token(self, _jwt):
+        _jwt.jwt_required()
+        _username = _jwt.get_jwt_subject()
+        return _username if _username else None
 
 
 @lru_cache()

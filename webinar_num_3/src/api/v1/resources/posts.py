@@ -56,8 +56,7 @@ def post_create(
     post_service: PostService = Depends(get_post_service),
     user_service: UserService = Depends(get_user_service)
 ) -> PostModel:
-    user = user_service.get_user_by_access_token(auth)
-    if user:
+    if user_service.get_user_by_access_token(auth):
         post: dict = post_service.create_post(post=post)
         return PostModel(**post)
     else:

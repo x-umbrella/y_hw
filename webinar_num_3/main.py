@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from src.api.v1.resources import posts, users, users_me
 from src.core import config, config_auth
-from src.db import cache, redis_cache
+from src.db import cache, redis_cache, init_db
 
 app = FastAPI(
     # Конфигурируем название проекта. Оно будет отображаться в документации
@@ -21,6 +21,7 @@ app = FastAPI(
 @app.on_event("startup")
 def startup():
     """Подключаемся к базам при старте сервера"""
+    init_db()
     cache.cache = redis_cache.CacheRedis(
         cache_instance=redis.Redis(
             host=config.REDIS_HOST, port=config.REDIS_PORT, max_connections=10

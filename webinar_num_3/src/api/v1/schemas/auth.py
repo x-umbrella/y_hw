@@ -29,3 +29,6 @@ class UserMe(UserLogin, UserEmail):
     uuid: UUID4
     created_at: datetime
     is_superuser: bool
+
+    class Config:
+        orm_mode = True

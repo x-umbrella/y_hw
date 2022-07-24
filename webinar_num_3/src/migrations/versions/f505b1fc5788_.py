@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 1a5366d46745
+Revision ID: f505b1fc5788
 Revises: 
-Create Date: 2022-07-20 12:36:24.599068
+Create Date: 2022-07-24 13:31:34.601784
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ import sqlmodel
 
 
 # revision identifiers, used by Alembic.
-revision = '1a5366d46745'
+revision = 'f505b1fc5788'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -28,17 +28,15 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('user',
-    sa.Column('id', sa.Integer(), nullable=True),
+    sa.Column('uuid', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('username', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('roles', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('password', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('is_superuser', sa.Boolean(), nullable=False),
-    sa.Column('uuid', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('is_totp_enabled', sa.Boolean(), nullable=False),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('email', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('password_hash', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    sa.Column('is_superuser', sa.Boolean(), nullable=True),
+    sa.Column('is_totp_enabled', sa.Boolean(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('email', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.PrimaryKeyConstraint('uuid')
     )
     # ### end Alembic commands ###
 

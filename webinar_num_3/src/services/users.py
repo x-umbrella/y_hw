@@ -14,8 +14,10 @@ __all__ = ("UserService", "get_user_service")
 
 class UserService(ServiceMixin):
 
-    def get_payload(self, payload: dict) -> str:
-        return jwt.encode(payload, config.JWT_SECRET_KEY, config.JWT_ALGORITHM)
+    def get_user(self, username: str) -> User:
+        return (
+            self.session.query(User).filter(User.username == username).first()
+        )
 
     def create_user(self, user_data: UserCreate) -> dict:
         user = User(
@@ -23,61 +25,47 @@ class UserService(ServiceMixin):
             username=user_data.username,
             password=generate_password_hash(user_data.password),
         )
-        if self.session.query(User).filter(User.username == user.username).first():
+        if self.get_user(user.username):
             return {"error": f"User {user.username} already registered"}
         self.session.add(user)
         self.session.commit()
         self.session.refresh(user)
 
-        if self.session.query(User).filter(User.username == user.username).first():
+        if self.get_user(user.username):
             return {"msg": "User Created.", "user": user}    
         
     def login(self, _jwt, user: UserLogin) -> dict:
-        _user = (
-            self.session.query(User).filter(User.username == user.username).first()
-        )
+        _user = self.get_user(user.username)
         if not _user:
             return {'error': 'User does not exist'}
         if not check_password_hash(_user.password, user.password):
             return {'error': 'Wrong password'}
-        user_uuid = (
-            self.session.query(User).filter(User.username == _user.username)
-            .first().uuid
-        )
+
         refresh_token = _jwt.create_refresh_token(subject=user.username)
-        config_auth.active_refresh_tokens.sadd(user_uuid, refresh_token)
+        config_auth.active_refresh_tokens.sadd(_user.uuid, refresh_token)
         return {'access_token': _jwt.create_access_token(subject=user.username),
             'refresh_token': refresh_token}
 
+
     def refresh_token(self, _jwt) -> dict:
         _jwt.jwt_refresh_token_required()
-        _username = _jwt.get_jwt_subject()
-        user_uuid = (self.session.query(User)
-            .filter(User.username == _username).first().uuid
-        )
-        payload = _jwt.get_raw_jwt()
-        new_refresh_token = _jwt.create_refresh_token(subject=_username)
-        config_auth.active_refresh_tokens.sadd(user_uuid, new_refresh_token)
-        config_auth.active_refresh_tokens.srem(user_uuid, self.get_payload(payload))
-        return {"access_token": _jwt.create_access_token(subject=_username),
-        "refresh_token": new_refresh_token}
+        _user = self.get_user(_jwt.get_jwt_subject())
+        config_auth.active_refresh_tokens.srem(_user.uuid, _jwt.__dict__["_token"])
+        tokens = {"access_token": _jwt.create_access_token(subject=_user.username),
+                "refresh_token": _jwt.create_refresh_token(subject=_user.username)}
+        config_auth.active_refresh_tokens.sadd(_user.uuid, tokens["refresh_token"])
+        return tokens
 
-    def user_info(self, jwt) -> dict:
-        jwt.jwt_required()
-        user_data = (
-            self.session.query(User).filter(
-                User.username == jwt.get_jwt_subject())
-                .first()
-        )
-        return {"user": UserMe.from_orm(user_data)}
+    def user_info(self, _jwt) -> dict:
+        _jwt.jwt_required()
+        return {"user": UserMe.from_orm(
+            self.get_user(_jwt.get_jwt_subject())
+        )}
 
     def user_modify(self, _jwt, user: UserEmail) -> dict:
         _jwt.jwt_required()
-        _username = _jwt.get_jwt_subject()
-        _user = (
-            self.session.query(User).filter(User.username == _username).first()
-        )
-        if self.session.query(User).filter(User.username == user.username).first():
+        _user = self.get_user(_jwt.get_jwt_subject())
+        if not _user:
             return {"error": "User exists"}
         for key, value in user.dict().items():
             setattr(_user, key, value)

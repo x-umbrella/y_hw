@@ -1,13 +1,12 @@
 from functools import lru_cache
 from fastapi import Depends
 from sqlmodel import Session
-from jose import jwt
 from werkzeug.security import generate_password_hash, check_password_hash
 from src.api.v1.schemas import UserCreate, UserLogin, UserMe, UserEmail
 from src.db import AbstractCache, get_cache, get_session
 from src.models import User
 from src.services import ServiceMixin
-from src.core import config, config_auth
+from src.core import config_auth
 
 __all__ = ("UserService", "get_user_service")
 

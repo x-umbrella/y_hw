@@ -3,8 +3,8 @@ import redis
 from fastapi_jwt_auth import AuthJWT
 from pydantic import BaseModel
 from .config import (
-    JWT_ACCESS_EXPIRES_S,
-    JWT_REFRESH_EXPIRES_S,
+    JWT_A_EX_S,
+    JWT_R_EX_S,
     JWT_SECRET_KEY,
     REDIS_HOST,
     REDIS_PORT
@@ -12,8 +12,8 @@ from .config import (
 
 
 class Settings(BaseModel):
-    access_expires: int = JWT_ACCESS_EXPIRES_S
-    refresh_expires: int = JWT_REFRESH_EXPIRES_S
+    access_expires: int = JWT_A_EX_S
+    refresh_expires: int = JWT_R_EX_S
     authjwt_secret_key = JWT_SECRET_KEY
     host = REDIS_HOST
     port = REDIS_PORT

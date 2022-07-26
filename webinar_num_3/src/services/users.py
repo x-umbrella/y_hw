@@ -5,8 +5,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from src.api.v1.schemas import UserCreate, UserLogin, UserMe, UserEmail
 from src.db import AbstractCache, get_cache, get_session
 from src.models import User
-from src.services import ServiceMixin
 from src.core import config_auth
+from src.services import ServiceMixin
+
 
 __all__ = ("UserService", "get_user_service")
 
@@ -40,19 +41,28 @@ class UserService(ServiceMixin):
         if not check_password_hash(_user.password, user.password):
             return {'error': 'Wrong password'}
 
-        refresh_token = _jwt.create_refresh_token(subject=user.username)
-        config_auth.active_refresh_tokens.sadd(_user.uuid, refresh_token)
-        return {'access_token': _jwt.create_access_token(subject=user.username),
-            'refresh_token': refresh_token}
+        tokens = {'access_token': _jwt.create_access_token(subject=user.username,
+                expires_time=config_auth.JWT_A_EX_S),
+                'refresh_token': _jwt.create_refresh_token(subject=user.username,
+                expires_time=config_auth.JWT_R_EX_S)}
+
+        config_auth.active_refresh_tokens.sadd(_user.uuid,
+            _jwt.get_raw_jwt(tokens["refresh_token"])["jti"])
+        return tokens
 
 
     def refresh_token(self, _jwt) -> dict:
         _jwt.jwt_refresh_token_required()
         _user = self.get_user(_jwt.get_jwt_subject())
-        config_auth.active_refresh_tokens.srem(_user.uuid, _jwt.__dict__["_token"])
-        tokens = {"access_token": _jwt.create_access_token(subject=_user.username),
-                "refresh_token": _jwt.create_refresh_token(subject=_user.username)}
-        config_auth.active_refresh_tokens.sadd(_user.uuid, tokens["refresh_token"])
+
+        config_auth.active_refresh_tokens.srem(_user.uuid, _jwt.get_raw_jwt()["jti"])
+        tokens = {"access_token": _jwt.create_access_token(subject=_user.username,
+                expires_time=config_auth.JWT_A_EX_S),
+                "refresh_token": _jwt.create_refresh_token(subject=_user.username,
+                expires_time=config_auth.JWT_R_EX_S)}
+                
+        config_auth.active_refresh_tokens.sadd(_user.uuid,
+            _jwt.get_raw_jwt(tokens["refresh_token"])["jti"])
         return tokens
 
     def user_info(self, _jwt) -> dict:
@@ -73,16 +83,29 @@ class UserService(ServiceMixin):
         self.session.commit()
         self.session.refresh(_user)
         config_auth.blocked_access_tokens.setex(_jwt.get_raw_jwt()["jti"],
-        config_auth.JWT_ACCESS_EXPIRES_S, "true"
+            config_auth.JWT_A_EX_S, "true"
         )
         return {"user": UserMe.from_orm(_user),
-            "access_token": _jwt.create_access_token(subject=user.username)
+            "access_token": _jwt.create_access_token(subject=user.username,
+            expires_time=config_auth.JWT_A_EX_S)
         }
 
     def get_user_by_access_token(self, _jwt):
         _jwt.jwt_required()
         _username = _jwt.get_jwt_subject()
         return _username if _username else None
+
+    def logout(self, _jwt):
+        _jwt.jwt_refresh_token_required()
+        _user = self.get_user(_jwt.get_jwt_subject())
+        config_auth.active_refresh_tokens.srem(_user.uuid, _jwt.get_raw_jwt()["jti"])
+        return {"msg": "You have been logged out."}
+
+    def logout_all(self, _jwt):
+        _jwt.jwt_refresh_token_required()
+        _user = self.get_user(_jwt.get_jwt_subject())
+        config_auth.active_refresh_tokens.delete(_user.uuid)
+        return {"msg": "You have been logged out from all devices."}
 
 
 @lru_cache()

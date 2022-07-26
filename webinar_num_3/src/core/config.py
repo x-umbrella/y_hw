@@ -7,8 +7,8 @@ VERSION: str = "1.0.0"
 # JWT SETTINGS
 JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "foo")
 JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
-JWT_ACCESS_EXPIRES_S: int = os.getenv("JWT_ACCESS_EXPIRES_S", timedelta(minutes=10))
-JWT_REFRESH_EXPIRES_S: int = os.getenv("JWT_REFRESH_EXPIRES_S", timedelta(days=15))
+JWT_A_EX_S: int = os.getenv("JWT_ACCESS_EXPIRE_S", timedelta(minutes=10))
+JWT_R_EX_S: int = os.getenv("JWT_REFRESH_EXPIRE_S", timedelta(days=15))
 
 # Название проекта. Используется в Swagger-документации
 PROJECT_NAME: str = os.getenv("PROJECT_NAME", "ylab_hw_3")
